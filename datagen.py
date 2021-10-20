@@ -40,14 +40,17 @@ if __name__ == '__main__':
     h = rng.uniform(0.5, 3.0, S)
     data = genData(N, h, rng=rng)
 
-    # calculate 'meaningful' sum of *last* time step
-    minabs = 2.0
-    lsttime = data[-1,:]
-    lsttime_meaningful = lsttime[np.abs(lsttime) > minabs]
-    sum_meaningful = np.sum(lsttime_meaningful)
-    # calculate data 'label'
+    ## calculate label
     label = 0
-    if sum_meaningful > 0.0:
+    # split data into first and second halves
+    frsthalf = data[    :N//2,:]
+    scndhalf = data[N//2:,    :]
+    # calculate correlations
+    frstcorr = np.sum(np.triu(np.corrcoef(frsthalf, rowvar=False))) - S
+    scndcorr = np.sum(np.triu(np.corrcoef(scndhalf, rowvar=False))) - S
+    # calculate 'case'
+    corrcutoff = 1.0
+    if frstcorr < -corrcutoff and scndcorr > +corrcutoff:
       label = 1
 
     data_list.append(data)
@@ -57,7 +60,9 @@ if __name__ == '__main__':
   data = np.stack(data_list)
   labl = np.array(labl_list, dtype=np.int32)
   print(data.shape, labl.shape)
-  print('ones: {}/{}'.format(np.sum(labl),labl.shape[0]))
+  print('ones: {}/{} {:.4}'.format(np.sum(labl),
+                                 labl.shape[0],
+                                 np.sum(labl)/labl.shape[0]))
 
   # write data and labels to disk
   np.savez_compressed('./data.npz', data=data, labl=labl)
