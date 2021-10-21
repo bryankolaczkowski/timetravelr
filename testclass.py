@@ -42,13 +42,16 @@ train_y,
 valid_y) = sklearn.model_selection.train_test_split(data, labl, train_size=0.9)
 
 # dataset package
-batchsize  = 128
+batchsize  = 256
 sbuffersz  = 1024
 train_data = tf.data.Dataset.from_tensor_slices((train_x,train_y))
 valid_data = tf.data.Dataset.from_tensor_slices((valid_x,valid_y))
 train_data = train_data.shuffle(buffer_size=sbuffersz).batch(batchsize)
 valid_data = valid_data.shuffle(buffer_size=sbuffersz).batch(batchsize)
 print(train_data, valid_data)
+
+# calculate steps per epoch
+stps_per_epoch = train_x.shape[0] // batchsize
 
 # calculate pos (1) and neg (0) counts
 tot = train_y.shape[0]
@@ -69,7 +72,8 @@ for i in range(nblcks):
   # attention
   tmp = tf.keras.layers.LayerNormalization()(out)
   tmp = tf.keras.layers.MultiHeadAttention(num_heads=nheads,
-                                           key_dim=keydim)(tmp,tmp,tmp)
+                                           key_dim=keydim,
+                                           dropout=doutrt)(tmp,tmp,tmp)
   tmp = tf.keras.layers.Dropout(rate=doutrt)(tmp)
   out = tf.keras.layers.Add()([out,tmp])
   # feedforward
@@ -92,7 +96,7 @@ model.summary()
 mets = [tf.keras.metrics.AUC(curve='ROC', name='roc'),
         tf.keras.metrics.AUC(curve='PR',  name='prc')]
 # compilation
-model.compile(optimizer=tf.keras.optimizers.Nadam(),
+model.compile(optimizer=tf.keras.optimizers.Nadam(learning_rate=0.001),
               loss=tf.keras.losses.BinaryCrossentropy(),
               metrics=mets)
 
