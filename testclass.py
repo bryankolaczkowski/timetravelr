@@ -43,10 +43,11 @@ valid_y) = sklearn.model_selection.train_test_split(data, labl, train_size=0.9)
 
 # dataset package
 batchsize  = 128
+sbuffersz  = 1024
 train_data = tf.data.Dataset.from_tensor_slices((train_x,train_y))
 valid_data = tf.data.Dataset.from_tensor_slices((valid_x,valid_y))
-train_data = train_data.shuffle(buffer_size=train_x.shape[0]).batch(batchsize)
-valid_data = valid_data.shuffle(buffer_size=valid_x.shape[0]).batch(batchsize)
+train_data = train_data.shuffle(buffer_size=sbuffersz).batch(batchsize)
+valid_data = valid_data.shuffle(buffer_size=sbuffersz).batch(batchsize)
 print(train_data, valid_data)
 
 # calculate pos (1) and neg (0) counts
@@ -56,11 +57,11 @@ neg = tot - pos
 
 ## build model
 # hyperparams
+nblcks = 2              # attention blocks
 nheads = 4              # attention heads
-nblcks = 4              # attention blocks - 2 default - 0.83 ROC
 repdim = nblcks * 4     # internal data representation dimension
-keydim = repdim / 2     # attention head key dimension
-doutrt = 0.2            # dropout rate
+keydim = repdim // 2    # attention head key dimension
+doutrt = nblcks * 0.1   # dropout rate
 # input encoding
 inp = tf.keras.Input(shape=train_x.shape[1:])
 out = tf.keras.layers.Dense(units=repdim)(inp)
@@ -106,3 +107,6 @@ model.fit(train_data,
           class_weight=cwts,
           validation_data=valid_data,
           callbacks=[tf.keras.callbacks.TensorBoard()])
+
+## save fitted model
+model.save('data.npz.tfmodel')

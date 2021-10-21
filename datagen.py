@@ -29,8 +29,7 @@ if __name__ == '__main__':
   if len(sys.argv) > 1:
     rng = np.random.default_rng(int(sys.argv[1]))
 
-  batchsize = 128
-  ndata = batchsize * 1000
+  ndata = 256000
   data_list = []
   labl_list = []
   for i in range(ndata):
