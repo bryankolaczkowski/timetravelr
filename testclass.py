@@ -56,27 +56,27 @@ neg = tot - pos
 
 ## build model
 # hyperparams
-repdim = 16
-nheads = 4
-keydim = repdim // 2
-nblcks = 4
-mhdout = 0.4
+nheads = 4              # attention heads
+nblcks = 4              # attention blocks - 2 default - 0.83 ROC
+repdim = nblcks * 4     # internal data representation dimension
+keydim = repdim / 2     # attention head key dimension
+doutrt = 0.2            # dropout rate
 # input encoding
 inp = tf.keras.Input(shape=train_x.shape[1:])
 out = tf.keras.layers.Dense(units=repdim)(inp)
 for i in range(nblcks):
   # attention
-  nrm = tf.keras.layers.LayerNormalization()(out)
-  mha = tf.keras.layers.MultiHeadAttention(num_heads=nheads,
-                                           key_dim=keydim,
-                                           value_dim=repdim,
-                                           dropout=mhdout)(nrm,nrm,nrm)
-  res = tf.keras.layers.Add()([out,mha])
+  tmp = tf.keras.layers.LayerNormalization()(out)
+  tmp = tf.keras.layers.MultiHeadAttention(num_heads=nheads,
+                                           key_dim=keydim)(tmp,tmp,tmp)
+  tmp = tf.keras.layers.Dropout(rate=doutrt)(tmp)
+  out = tf.keras.layers.Add()([out,tmp])
   # feedforward
-  nrm = tf.keras.layers.LayerNormalization()(res)
-  ffa = tf.keras.layers.Dense(units=repdim, activation=lrsact)(nrm)
-  ffb = tf.keras.layers.Dense(units=repdim)(ffa)
-  out = tf.keras.layers.Add()([res,ffb])
+  tmp = tf.keras.layers.LayerNormalization()(out)
+  tmp = tf.keras.layers.Dense(units=repdim, activation=lrsact)(tmp)
+  tmp = tf.keras.layers.Dense(units=repdim)(tmp)
+  tmp = tf.keras.layers.Dropout(rate=doutrt)(tmp)
+  out = tf.keras.layers.Add()([out,tmp])
 # decision
 obiasinit = tf.keras.initializers.Constant(np.log([pos/neg]))
 out = tf.keras.layers.Flatten()(out)
@@ -104,4 +104,5 @@ cwts = {0:w0, 1:w1}
 model.fit(train_data,
           epochs=1000,
           class_weight=cwts,
-          validation_data=valid_data)
+          validation_data=valid_data,
+          callbacks=[tf.keras.callbacks.TensorBoard()])
