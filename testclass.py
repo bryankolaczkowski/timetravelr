@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import sklearn.model_selection
 import numpy as np
 import tensorflow as tf
@@ -23,6 +24,16 @@ def lrsact(x, alpha=0.4):
   return r
 
 
+# get train dataset size from command-line
+trainsiz = 0
+if len(sys.argv) > 1:
+    trainsiz = int(sys.argv[1])
+
+# repeat resized dataset?
+mult = False
+if len(sys.argv) > 2:
+    mult = True
+
 # read data
 with np.load('data.npz') as dict:
   data = dict['data']
@@ -41,13 +52,22 @@ valid_x,
 train_y,
 valid_y) = sklearn.model_selection.train_test_split(data, labl, train_size=0.9)
 
+# cut training data down to size!
+mtot = train_x.shape[0]
+if trainsiz:
+    train_x = train_x[:trainsiz]
+    train_y = train_y[:trainsiz]
+    if mult:
+        mfact = mtot // trainsiz
+        train_x = np.tile(train_x, reps=(mfact, 1, 1))
+        train_y = np.tile(train_y, reps=mfact)
+
 # dataset package
 batchsize  = 256
-sbuffersz  = 1024
 train_data = tf.data.Dataset.from_tensor_slices((train_x,train_y))
 valid_data = tf.data.Dataset.from_tensor_slices((valid_x,valid_y))
-train_data = train_data.shuffle(buffer_size=sbuffersz).batch(batchsize)
-valid_data = valid_data.shuffle(buffer_size=sbuffersz).batch(batchsize)
+train_data = train_data.shuffle(buffer_size=train_x.shape[0]).batch(batchsize)
+valid_data = valid_data.shuffle(buffer_size=valid_x.shape[0]).batch(batchsize)
 print(train_data, valid_data)
 
 # calculate steps per epoch
@@ -113,4 +133,10 @@ model.fit(train_data,
           callbacks=[tf.keras.callbacks.TensorBoard()])
 
 ## save fitted model
-model.save('data.npz.tfmodel')
+mfname = 'data.npz'
+if trainsiz:
+    mfname += '.{}'.format(trainsiz)
+if mult:
+    mfname += '.mult'
+mfname += '.tfmodel'
+model.save(mfname)
