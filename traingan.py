@@ -294,7 +294,7 @@ class ConcatPos(tf.keras.layers.Layer):
   def __init__(self, timesteps, *args, **kwargs):
     super(ConcatPos, self).__init__(*args, **kwargs)
     self.timesteps = timesteps
-    self.pos = tf.linspace(0.0, 1.0, self.timesteps)
+    self.pos = tf.linspace(-2.0, +2.0, self.timesteps)
     self.pos = tf.expand_dims(tf.expand_dims(self.pos, axis=-1), axis=0)
     return
 
@@ -476,6 +476,15 @@ if __name__ == '__main__':
   group.add_argument('--train_label', dest='train_label', type=int,
                      help='training label, 0|1', metavar='N')
 
+  # model
+  group = parser.add_argument_group('model')
+  group.add_argument('--blocks', dest='blocks', type=int,
+                     help='number of blocks', metavar='N')
+  group.add_argument('--heads', dest='heads', type=int,
+                     help='number of multiheads', metavar='N')
+  group.add_argument('--dropout', dest='dropout', type=float,
+                     help='dropout proportion', metavar='N')
+
   # training regime
   group = parser.add_argument_group('training')
   group.add_argument('--train_prop', dest='train_prop', type=float,
@@ -494,6 +503,10 @@ if __name__ == '__main__':
   parser.set_defaults(file='data.npz',
                       train_size=2048,
                       train_label=0,
+
+                      blocks=4,
+                      heads=4,
+                      dropout=0.4,
 
                       train_prop=0.9,
                       batch_size=256,
@@ -515,9 +528,15 @@ if __name__ == '__main__':
                              args.batch_size,
                              args.train_prop)
 
-  generator = generator_build(data_timesteps, data_dimension)
-  discriminator = discriminator_build(data_timesteps, data_dimension)
-
+  generator = generator_build(data_timesteps,
+                              data_dimension,
+                              nblcks=args.blocks,
+                              nheads=args.heads)
+  discriminator = discriminator_build(data_timesteps,
+                                      data_dimension,
+                                      nblcks=args.blocks,
+                                      nheads=args.heads,
+                                      doutrt=args.dropout)
   generator.summary()
   discriminator.summary()
 
