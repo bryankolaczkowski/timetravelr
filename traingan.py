@@ -294,7 +294,7 @@ class ConcatPos(tf.keras.layers.Layer):
   def __init__(self, timesteps, *args, **kwargs):
     super(ConcatPos, self).__init__(*args, **kwargs)
     self.timesteps = timesteps
-    self.pos = tf.linspace(-2.0, +2.0, self.timesteps)
+    self.pos = tf.linspace(0.0, 1.0, self.timesteps)
     self.pos = tf.expand_dims(tf.expand_dims(self.pos, axis=-1), axis=0)
     return
 
